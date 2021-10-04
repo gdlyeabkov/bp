@@ -59,6 +59,36 @@ app.get('/mans/photos', (req, res) => {
 
 })
 
+app.get('/mans/check', (req, res)=>{
+    
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader("Access-Control-Allow-Headers", "X-Requested-With, X-Access-Token, X-Socket-ID, Content-Type");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, PATCH, DELETE");
+    
+    let queryBefore = ManModel.find({ name: { $in: req.query.gayname }  })
+    queryBefore.exec((err, allMans) => {
+        if(err){
+            return res.json({ "status": "Error" })
+        }
+        if(allMans.length >= 1){
+            let query =  ManModel.findOne({'name': req.query.gayname}, function(err, man){
+                if (err){
+                    return res.json({ "status": "Error" })
+                } else {
+                    const passwordCheck = bcrypt.compareSync(req.query.gaypassword, man.secret) && req.query.gaypassword !== ''
+                    if(man != null && man != undefined && passwordCheck){
+                        return res.json({ "status": "OK", "man": man.name })
+                    } else {
+                        return res.json({ "status": "Error" })
+                    }
+                }
+            })    
+        } else if(allMans.length <= 0){
+            return res.json({ "status": "Error" })
+        }
+    })
+})
 
 app.post('/mans/create', upload.single('myphoto'), (req, res)=>{
         
