@@ -8,6 +8,7 @@ const storage = multer.diskStorage({
       cb(null, file.originalname)
     }
 })
+const upload = multer({ storage: storage })
 
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
@@ -47,22 +48,34 @@ const ManSchema = new mongoose.Schema({
 
 const ManModel = mongoose.model('ManModel', ManSchema);
 
-app.get('/mans/create', (req, res)=>{
+app.get('/mans/photos', (req, res) => {
         
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader("Access-Control-Allow-Headers", "X-Requested-With, X-Access-Token, X-Socket-ID, Content-Type");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, PATCH, DELETE");
     
-    // let file = req.file
-    // if(!file){
-    //     return res.json({ "status": "Error" })
-    // }
-    // fs.rename(req.file.path, path.join(__dirname, '/uploads') + "/" + req.query.gayname + ".png", function (err) {
-    //     if (err) {
-    //         return res.json({ "status": "Error" })
-    //     }
-    // })
+    return res.sendFile(__dirname + `/uploads/${req.query.gayname}.png`)
+
+})
+
+
+app.post('/mans/create', upload.single('myphoto'), (req, res)=>{
+        
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader("Access-Control-Allow-Headers", "X-Requested-With, X-Access-Token, X-Socket-ID, Content-Type");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, PATCH, DELETE");
+    
+    let file = req.file
+    if(!file){
+        return res.json({ "status": "Error" })
+    }
+    fs.rename(req.file.path, path.join(__dirname, '/uploads') + "/" + req.query.gayname + ".png", function (err) {
+        if (err) {
+            return res.json({ "status": "Error" })
+        }
+    })
     let queryOfMans = ManModel.find({})
     queryOfMans.exec((err, allMans) => {
         if (err){
@@ -88,8 +101,8 @@ app.get('/mans/create', (req, res)=>{
             if(err){
                 return res.json({ "status": "Error" })
             } else {
-                // return res.redirect("http://localhost:4000/")
-                return res.json({ "status": "OK" })
+                return res.redirect("http://localhost:4000/")
+                // return res.json({ "status": "OK" })
             }
         })
     })

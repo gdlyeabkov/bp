@@ -37,54 +37,58 @@
         Создать аккаунт
       </button>
       <div v-if="togglerGayForm" class="gayForm">
-        <label class="gayLabel" for="gayname">
-          Твоё имя
-        </label>
-        <input v-model="gayName" id="gayname" placeholder="Как к тебе будут обращаться" type="text" class="gayInputField form-control w-50">
-        <label class="gayLabel" for="gaypassword">
-          Твой секрет
-        </label>
-        <input v-model="gayPassword" id="gaypassword" placeholder="Никому не раскрывай свой секрет" type="password" class="gayInputField form-control w-50">
-        <label class="gayLabel" for="gayage">
-          Твой возраст
-        </label>
-        <input v-model="gayAge" id="gayage" placeholder="Насколько ты молодой мальчик" type="number" class="gayInputField form-control w-50">
-        <label class="gayLabel" for="gaygender">
-          Твой пол
-        </label>
-        <div class="selectGenderContainer">
-          <label class="gayLabel" for="gaygender">
-            парень
+        <form method="POST" enctype="multipart/form-data" @submit.prevent="submitGayForm($event)" :action="`http://localhost:4000/mans/create/?gayname=${gayName}&gaypassword=${gayPassword}&gayage=${gayAge}`">
+          <label class="gayLabel" for="gayname">
+            Твоё имя
           </label>
-          <input id="gaygender" type="radio" name="gaygender" class="gayInputField">
-          <label class="gayLabel" for="gaygender">
-            парень
+          <input v-model="gayName" id="gayname" placeholder="Как к тебе будут обращаться" type="text" class="gayInputField form-control w-50">
+          <label class="gayLabel" for="gaypassword">
+            Твой секрет
           </label>
-          <input id="gaygender" type="radio" name="gaygender" class="gayInputField">
-        </div>
-        <label class="gayLabel" for="gayphoto">
-          Твои фотки
-        </label>
-        <input id="gayphoto" placeholder="Никому не раскрывай свой секрет" type="file" class="gayInputField form-control w-50">
-        <div class="registerGayBtnContainer">
-          <button class="registerGayBtn btn btn-primary" @click="createGay()">
-            Создать аккаунт
-          </button>
-          <button v-if="errors.length >= 1" class="btn btn-danger">
-            {{ errors }}
-          </button>
-        </div>
+          <input v-model="gayPassword" id="gaypassword" placeholder="Никому не раскрывай свой секрет" type="password" class="gayInputField form-control w-50">
+          <label class="gayLabel" for="gayage">
+            Твой возраст
+          </label>
+          <input v-model="gayAge" id="gayage" placeholder="Насколько ты молодой мальчик" type="number" class="gayInputField form-control w-50">
+          <label class="gayLabel" for="gaygender">
+            Твой пол
+          </label>
+          <div class="selectGenderContainer">
+            <label class="gayLabel" for="gaygender">
+              парень
+            </label>
+            <input id="gaygender" type="radio" name="gaygender" class="gayInputField">
+            <label class="gayLabel" for="gaygender">
+              парень
+            </label>
+            <input id="gaygender" type="radio" name="gaygender" class="gayInputField">
+          </div>
+          <label class="gayLabel" for="gayphoto">
+            Твои фотки
+          </label>
+          <input id="gayphoto" placeholder="Никому не раскрывай свой секрет" name="myphoto" type="file" class="gayInputField form-control w-50">
+          <div class="registerGayBtnContainer">
+            <button class="registerGayBtn btn btn-primary" @click="createGay()">
+              Создать аккаунт
+            </button>
+            <button v-if="errors.length >= 1" class="btn btn-danger">
+              {{ errors }}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import * as jwt from 'jsonwebtoken'
 
 export default {
   name: 'Home',
   data(){
     return {
+      token: window.localStorage.getItem('bluepassiontoken'),
       togglerGayForm: false,
       gayName: '',
       gayPassword: '',
@@ -92,7 +96,34 @@ export default {
       errors: ''
     }
   },
+  mounted(){
+    if(this.$route.query.redirectroute !== null && this.$route.query.redirectroute !== undefined){
+      // логика перенаправления
+      if(this.$route.query.redirectroute.length <= 1){
+        this.$router.push({ path: this.$route.query.redirectroute })
+      } else if(!this.$route.query.redirectroute.length >= 2){
+        this.$router.push({ name: "HotelRoom" })
+      }
+    } else {
+      jwt.verify(this.token, 'bluepassionsecret', (err, decoded) => {
+        if (err) {
+          this.$router.push({ name: "Hotel" })
+        } else {
+          this.$router.push({ name: "HotelRoom" })
+        }
+      })
+    }
+  },
   methods: {
+    submitGayForm(event){
+      this.token = jwt.sign({
+        man: this.gayName
+      }, 'bluepassionsecret', { expiresIn: '5m' })
+      localStorage.setItem('bluepassiontoken', this.token)
+      setTimeout(() => {
+        event.target.submit()
+      }, 1500)
+    },
     createGay(){
       fetch(`http://localhost:4000/mans/create/?gayname=${this.gayName}&gaypassword=${this.gayPassword}&gayage=${this.gayAge}`, {
         mode: 'cors',
@@ -122,6 +153,10 @@ export default {
     .then(result => {
       console.log(JSON.parse(result))
       if(JSON.parse(result).status.includes('OK')){
+        this.token = jwt.sign({
+          man: this.gayname
+        }, 'bluepassionsecret', { expiresIn: '5m' })
+        localStorage.setItem('bluepassiontoken', this.token)
         this.$router.push({ name: 'HotelRoom' })  
       } else if(JSON.parse(result).status.includes('Error')){
         this.errors = "Такой мальчик уже существует"
